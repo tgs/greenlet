@@ -38,6 +38,7 @@ typedef struct _greenlet {
 	PyObject* exc_traceback;
 #endif
 	PyObject* dict;
+	PyObject* context;
 } PyGreenlet;
 
 #define PyGreenlet_Check(op)      PyObject_TypeCheck(op, &PyGreenlet_Type)

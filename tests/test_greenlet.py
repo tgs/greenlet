@@ -3,6 +3,7 @@ import sys
 import time
 import threading
 import unittest
+import contextvars
 
 from greenlet import greenlet
 
@@ -50,6 +51,24 @@ class GreenletTests(unittest.TestCase):
         g.switch()
         lst.append(4)
         self.assertEqual(lst, list(range(5)))
+
+    def test_contextvar(self):
+        cv = contextvars.ContextVar('cv', default=90)
+        cv.set(0)
+
+        def f():
+            cv.set(cv.get() + 10)
+            greenlet.getcurrent().parent.switch()
+            cv.set(11)
+
+        g = greenlet(
+            lambda: contextvars.copy_context().run(f))
+        self.assertEqual(cv.get(), 0)
+        g.switch()
+        self.assertEqual(cv.get(), 0)
+        cv.set(1)
+        g.switch()
+        self.assertEqual(cv.get(), 1)
 
     def test_parent_equals_None(self):
         g = greenlet(parent=None)

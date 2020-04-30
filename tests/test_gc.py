@@ -2,6 +2,7 @@ import gc
 import sys
 import unittest
 import weakref
+import contextvars
 
 import greenlet
 
@@ -75,3 +76,26 @@ class GCTests(unittest.TestCase):
             del g
             greenlet.getcurrent()
             gc.collect()
+
+        def test_collect_contexts(self):
+            cv = contextvars.ContextVar('cv')
+            status = []
+            def callback(ref):
+                status.append(1)
+            class Obj:
+                pass  # make it weakref-able
+
+            def child():
+                status.append(0)
+                o = Obj()
+                ref = weakref.ref(o, callback)
+                cv.set(o)
+                return ref
+
+            self.assertEqual(None, cv.get(None))
+            g = greenlet.greenlet(
+                lambda: contextvars.copy_context().run(child))
+            ref = g.switch()
+            self.assertEqual(None, cv.get(None))
+            gc.collect()
+            self.assertEqual(status, [0, 1])

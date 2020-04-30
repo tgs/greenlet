@@ -485,6 +485,7 @@ static int g_switchstack(void)
 		PyThreadState* tstate = PyThreadState_GET();
 		current->recursion_depth = tstate->recursion_depth;
 		current->top_frame = tstate->frame;
+		current->context = tstate->context;
 #ifdef GREENLET_USE_EXC_INFO
 		current->exc_info = tstate->exc_info;
 		current->exc_state = tstate->exc_state;
@@ -498,6 +499,7 @@ static int g_switchstack(void)
 	if (err < 0) {   /* error */
 		PyGreenlet* current = ts_current;
 		current->top_frame = NULL;
+		current->context = NULL;
 #ifdef GREENLET_USE_EXC_INFO
 		green_clear_exc(current);
 #else
@@ -516,6 +518,9 @@ static int g_switchstack(void)
 		tstate->recursion_depth = target->recursion_depth;
 		tstate->frame = target->top_frame;
 		target->top_frame = NULL;
+		tstate->context = target->context;
+		target->context = NULL;
+		tstate->context_ver++;
 #ifdef GREENLET_USE_EXC_INFO
 		tstate->exc_state = target->exc_state;
 		tstate->exc_info = target->exc_info ? target->exc_info : &tstate->exc_state;
@@ -875,6 +880,8 @@ static PyObject* green_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		}
 		Py_INCREF(ts_current);
 		((PyGreenlet*) o)->parent = ts_current;
+		/*((PyGreenlet*) o)->context = PyContext_CopyCurrent();
+		Py_INCREF(((PyGreenlet*) o)->context);*/
 	}
 	return o;
 }
@@ -966,6 +973,7 @@ green_traverse(PyGreenlet *self, visitproc visit, void *arg)
 	Py_VISIT(self->exc_value);
 	Py_VISIT(self->exc_traceback);
 #endif
+	Py_VISIT(self->context);
 	Py_VISIT(self->dict);
 	return 0;
 }
@@ -998,6 +1006,7 @@ static int green_clear(PyGreenlet* self)
 	Py_CLEAR(self->exc_value);
 	Py_CLEAR(self->exc_traceback);
 #endif
+	Py_CLEAR(self->context);
 	Py_CLEAR(self->dict);
 	return 0;
 }
@@ -1073,6 +1082,7 @@ static void green_dealloc(PyGreenlet* self)
 	Py_CLEAR(self->exc_value);
 	Py_CLEAR(self->exc_traceback);
 #endif
+	Py_CLEAR(self->context);
 	Py_CLEAR(self->dict);
 	Py_TYPE(self)->tp_free((PyObject*) self);
 }
