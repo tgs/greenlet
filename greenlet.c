@@ -880,8 +880,11 @@ static PyObject* green_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		}
 		Py_INCREF(ts_current);
 		((PyGreenlet*) o)->parent = ts_current;
-		/*((PyGreenlet*) o)->context = PyContext_CopyCurrent();
-		Py_INCREF(((PyGreenlet*) o)->context);*/
+		/*
+		 * This is missing a matching decref I think
+		((PyGreenlet*) o)->context = PyContext_CopyCurrent();
+		Py_INCREF(((PyGreenlet*) o)->context);
+		*/
 	}
 	return o;
 }
