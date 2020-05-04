@@ -53,22 +53,27 @@ class GreenletTests(unittest.TestCase):
         self.assertEqual(lst, list(range(5)))
 
     def test_contextvar(self):
+        problems = []
         cv = contextvars.ContextVar('cv', default=90)
         cv.set(0)
 
         def f():
             cv.set(cv.get() + 10)
             greenlet.getcurrent().parent.switch()
+            if cv.get() != 10:
+                problems.append('Expected 10 but got %r' % cv.get())
             cv.set(11)
 
+        new_ctx = contextvars.copy_context()
         g = greenlet(
-            lambda: contextvars.copy_context().run(f))
+            lambda: new_ctx.run(f))
         self.assertEqual(cv.get(), 0)
         g.switch()
         self.assertEqual(cv.get(), 0)
         cv.set(1)
         g.switch()
         self.assertEqual(cv.get(), 1)
+        self.assertFalse(problems)
 
     def test_parent_equals_None(self):
         g = greenlet(parent=None)
